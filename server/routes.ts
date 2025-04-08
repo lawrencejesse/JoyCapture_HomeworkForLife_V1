@@ -18,7 +18,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const entryData = insertEntrySchema.parse({
         ...req.body,
-        userId: req.user!.id,
+        user_id: req.user!.id,
       });
 
       const entry = await storage.createEntry(entryData);
@@ -39,19 +39,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(401).json({ message: "Unauthorized" });
     }
 
-    const limit = Number(req.query.limit) || 10;
-    const offset = Number(req.query.offset) || 0;
-
     try {
-      // Get the current user's ID from the session
-      const userId = req.user!.id;
-      
-      // Only get entries belonging to this user
-      const entries = await storage.getEntries(userId, limit, offset);
-      
+      const limit = Number(req.query.limit) || 10;
+      const offset = Number(req.query.offset) || 0;
+      const user_id = req.user!.id;
+
+      // Handle search parameters
+      const searchParams = {
+        query: req.query.query as string | undefined,
+        startDate: req.query.startDate ? new Date(req.query.startDate as string) : undefined,
+        endDate: req.query.endDate ? new Date(req.query.endDate as string) : undefined,
+        tags: req.query.tags ? (req.query.tags as string).split(',') : undefined,
+        category: req.query.category as string | undefined,
+        mood: req.query.mood as string | undefined,
+      };
+
+      const entries = Object.keys(searchParams).some(key => searchParams[key as keyof typeof searchParams] !== undefined)
+        ? await storage.searchEntries(user_id, searchParams, limit, offset)
+        : await storage.getEntries(user_id, limit, offset);
+
       res.json(entries);
     } catch (err) {
-      console.error("Error getting entries:", err);
       res.status(500).json({ message: "Failed to fetch entries" });
     }
   });

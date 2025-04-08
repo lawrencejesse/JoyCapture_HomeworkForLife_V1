@@ -2,7 +2,7 @@ import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { YouTube } from "@/components/ui/youtube";
-import Header from "@/components/layout/header";
+import { Header } from "@/components/layout/header";
 import Footer from "@/components/layout/footer";
 import { CalendarIcon, Heart, LeafIcon, Play, TimerIcon, UserPlus } from "lucide-react";
 

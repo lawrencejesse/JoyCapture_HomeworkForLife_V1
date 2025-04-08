@@ -3,7 +3,8 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { JournalEntryForm } from "@/components/journal-entry-form";
 import { JournalEntryList } from "@/components/journal-entry-list";
-import Header from "@/components/layout/header";
+import { SearchBar, SearchFilters } from "@/components/search-bar";
+import { Header } from "@/components/layout/header";
 import MobileNav from "@/components/layout/mobile-nav";
 import { Entry } from "@shared/schema";
 import { format } from "date-fns";
@@ -13,6 +14,7 @@ import { Loader2 } from "lucide-react";
 export default function HomePage() {
   const { user } = useAuth();
   const [entryOffset, setEntryOffset] = useState(0);
+  const [searchFilters, setSearchFilters] = useState<SearchFilters>({});
   const ENTRIES_PER_PAGE = 5;
 
   const { 
@@ -20,19 +22,30 @@ export default function HomePage() {
     isLoading,
     isFetching
   } = useQuery<Entry[]>({
-    queryKey: ["/api/entries", entryOffset],
+    queryKey: ["/api/entries", entryOffset, searchFilters],
     queryFn: async () => {
-      const response = await fetch(`/api/entries?limit=${ENTRIES_PER_PAGE}&offset=${entryOffset}`);
-      if (!response.ok) {
-        throw new Error("Failed to fetch entries");
-      }
+      const params = new URLSearchParams({
+        limit: ENTRIES_PER_PAGE.toString(),
+        offset: entryOffset.toString(),
+        ...(searchFilters.query && { query: searchFilters.query }),
+        ...(searchFilters.startDate && { startDate: searchFilters.startDate.toISOString() }),
+        ...(searchFilters.endDate && { endDate: searchFilters.endDate.toISOString() }),
+        ...(searchFilters.category && { category: searchFilters.category }),
+        ...(searchFilters.mood && { mood: searchFilters.mood }),
+        ...(searchFilters.tags && searchFilters.tags.length > 0 && { tags: searchFilters.tags.join(",") }),
+      });
+      const response = await apiRequest("GET", `/api/entries?${params.toString()}`);
       return response.json();
     },
   });
 
   const createEntryMutation = useMutation({
-    mutationFn: async (newEntry: { content: string; category?: string }) => {
-      return apiRequest("POST", "/api/entries", newEntry);
+    mutationFn: async (newEntry: { content: string; category?: string; custom_date?: Date }) => {
+      const entryData = {
+        ...newEntry,
+        custom_date: newEntry.custom_date ? newEntry.custom_date.toISOString() : undefined,
+      };
+      return apiRequest("POST", "/api/entries", entryData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/entries"] });
@@ -45,6 +58,16 @@ export default function HomePage() {
 
   const today = new Date();
   const formattedDate = format(today, "MMMM d, yyyy");
+
+  const handleSearch = (filters: SearchFilters) => {
+    setSearchFilters(filters);
+    setEntryOffset(0);
+  };
+
+  const handleClearSearch = () => {
+    setSearchFilters({});
+    setEntryOffset(0);
+  };
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -63,86 +86,54 @@ export default function HomePage() {
               createEntryMutation.mutate({
                 content: data.content,
                 category: data.category,
+                custom_date: data.custom_date,
               });
             }}
             isSubmitting={createEntryMutation.isPending}
           />
         </section>
 
+        {/* Search Section */}
+        <section className="mb-8">
+          <SearchBar onSearch={handleSearch} onClear={handleClearSearch} />
+        </section>
+
         {/* Previous Entries Section */}
         <section>
           <div className="flex justify-between items-center mb-4">
-            <h2 className="font-bold text-xl text-foreground">Your Joy Collection</h2>
+            <h2 className="font-bold text-xl text-foreground">Previous Moments</h2>
           </div>
 
           {isLoading ? (
-            <div className="flex justify-center py-8">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <div className="flex justify-center items-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
-          ) : entries.length > 0 ? (
+          ) : entries.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              {Object.keys(searchFilters).length > 0 ? (
+                <p>No entries found matching your search. Try adjusting your filters or start capturing your moments of joy.</p>
+              ) : (
+                <p>No entries yet. Start capturing your moments of joy!</p>
+              )}
+            </div>
+          ) : (
             <>
               <JournalEntryList entries={entries} />
-              
-              {entries.length >= ENTRIES_PER_PAGE && (
-                <div className="py-4 text-center">
-                  <button 
-                    className="text-primary font-medium flex items-center justify-center mx-auto"
+              {entries.length === ENTRIES_PER_PAGE && (
+                <div className="mt-4 text-center">
+                  <button
                     onClick={loadMoreEntries}
                     disabled={isFetching}
+                    className="text-sm text-muted-foreground hover:text-foreground transition-colors"
                   >
                     {isFetching ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Loading...
-                      </>
-                    ) : (
-                      <>
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          className="mr-2 h-4 w-4"
-                        >
-                          <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-                          <path d="M3 3v5h5" />
-                          <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" />
-                          <path d="M16 16h5v5" />
-                        </svg>
-                        Load more memories
-                      </>
-                    )}
+                      <Loader2 className="h-4 w-4 animate-spin inline mr-2" />
+                    ) : null}
+                    Load More
                   </button>
                 </div>
               )}
             </>
-          ) : (
-            <div className="text-center py-12 bg-white rounded-xl card-shadow">
-              <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
-                <svg 
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="text-primary h-8 w-8"
-                >
-                  <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
-                  <polyline points="14 2 14 8 20 8" />
-                  <path d="M12 18v-6" />
-                  <path d="M9 15h6" />
-                </svg>
-              </div>
-              <h3 className="text-xl font-bold mb-2">No entries yet</h3>
-              <p className="text-muted-foreground mb-6">
-                Start capturing your daily moments of joy
-              </p>
-            </div>
           )}
         </section>
       </main>
