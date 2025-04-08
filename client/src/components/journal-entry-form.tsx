@@ -31,7 +31,6 @@ const formSchema = z.object({
   content: z.string()
     .min(1, "Please enter your memory")
     .max(MAX_CONTENT_LENGTH, `Entry cannot exceed ${MAX_CONTENT_LENGTH} characters`),
-  category: z.string().optional(),
   custom_date: z.date().optional(),
 });
 
@@ -56,7 +55,6 @@ export function JournalEntryForm({
     resolver: zodResolver(formSchema),
     defaultValues: {
       content: initialData?.content || "",
-      category: initialData?.category || "",
       custom_date: initialData?.custom_date ? new Date(initialData.custom_date) : new Date(),
     },
   });
@@ -112,29 +110,10 @@ export function JournalEntryForm({
             <div className="flex gap-4">
               <FormField
                 control={form.control}
-                name="category"
-                render={({ field }) => (
-                  <FormItem className="flex-1">
-                    <FormLabel>Category</FormLabel>
-                    <FormControl>
-                      <input
-                        type="text"
-                        placeholder="e.g., Family, Nature, Achievement"
-                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
                 name="custom_date"
                 render={({ field }) => (
                   <FormItem className="flex-1">
-                    <FormLabel>When did this happen?</FormLabel>
+                    <FormLabel className="mb-2 block">When did this happen?</FormLabel>
                     <Popover>
                       <PopoverTrigger asChild>
                         <FormControl>

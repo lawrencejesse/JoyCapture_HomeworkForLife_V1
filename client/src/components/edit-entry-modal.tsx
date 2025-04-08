@@ -22,7 +22,6 @@ const formSchema = z.object({
   content: z.string()
     .min(1, "Please enter your memory")
     .max(5000, `Entry cannot exceed 5000 characters`), // Match the form
-  category: z.string().optional(),
   custom_date: z.date().optional(),
 });
 type FormValues = z.infer<typeof formSchema>;

@@ -23,9 +23,9 @@ export interface SearchFilters {
   query?: string;
   startDate?: Date;
   endDate?: Date;
-  tags?: string[];
-  category?: string;
-  mood?: string;
+  // tags?: string[]; // REMOVED
+  // category?: string; // REMOVED
+  // mood?: string; // REMOVED
 }
 
 interface SearchBarProps {
@@ -33,23 +33,11 @@ interface SearchBarProps {
   onClear: () => void;
 }
 
-const categories = [
-  "Discovery",
-  "Connection",
-  "Friendship",
-  "Nature",
-  "Achievement",
-  "Gratitude",
-];
+// REMOVED categories constant
+// const categories = [ ... ];
 
-const moods = [
-  "Happy",
-  "Excited",
-  "Peaceful",
-  "Grateful",
-  "Inspired",
-  "Content",
-];
+// REMOVED moods constant
+// const moods = [ ... ];
 
 export function SearchBar({ onSearch, onClear }: SearchBarProps) {
   const [filters, setFilters] = useState<SearchFilters>({});
@@ -167,70 +155,14 @@ export function SearchBar({ onSearch, onClear }: SearchBarProps) {
                 </div>
               </div>
 
-              {/* Category */}
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <FilterIcon className="h-4 w-4" />
-                  <span>Category</span>
-                </div>
-                <Select
-                  value={filters.category}
-                  onValueChange={(value) => setFilters(prev => ({ ...prev, category: value }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories.map((category) => (
-                      <SelectItem key={category} value={category}>
-                        {category}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              {/* Category REMOVED */}
+              {/* <div className="space-y-2"> ... </div> */}
 
-              {/* Mood */}
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <span>😊</span>
-                  <span>Mood</span>
-                </div>
-                <Select
-                  value={filters.mood}
-                  onValueChange={(value) => setFilters(prev => ({ ...prev, mood: value }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select mood" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {moods.map((mood) => (
-                      <SelectItem key={mood} value={mood}>
-                        {mood}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              {/* Mood REMOVED */}
+              {/* <div className="space-y-2"> ... </div> */}
 
-              {/* Tags */}
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <TagIcon className="h-4 w-4" />
-                  <span>Tags</span>
-                </div>
-                <Input
-                  placeholder="Add tags (comma separated)"
-                  value={filters.tags?.join(", ") || ""}
-                  onChange={(e) => {
-                    const tags = e.target.value
-                      .split(",")
-                      .map(tag => tag.trim())
-                      .filter(tag => tag.length > 0);
-                    setFilters(prev => ({ ...prev, tags }));
-                  }}
-                />
-              </div>
+              {/* Tags REMOVED */}
+              {/* <div className="space-y-2"> ... </div> */}
             </div>
           )}
         </div>

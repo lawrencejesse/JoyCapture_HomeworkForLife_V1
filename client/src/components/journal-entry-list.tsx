@@ -17,7 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { EditEntryModal } from "./edit-entry-modal";
 
 // Character limit for the truncated view
-const TRUNCATE_LENGTH = 280;
+const TRUNCATE_LENGTH = 100;
 
 interface JournalEntryListProps {
   entries: Entry[];
