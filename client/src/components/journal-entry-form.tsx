@@ -15,7 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { CheckIcon } from "lucide-react";
 
-const MAX_CONTENT_LENGTH = 1000;
+const MAX_CONTENT_LENGTH = 2000;
 
 const formSchema = z.object({
   content: z.string()
