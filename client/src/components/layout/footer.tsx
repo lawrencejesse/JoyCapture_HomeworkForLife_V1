@@ -1,12 +1,15 @@
-import { LeafIcon } from "lucide-react";
+import { Link } from 'wouter';
+import { Flame } from 'lucide-react';
+// import { CustomFlameIcon } from '@/components/icons/CustomFlameIcon';
 
-export default function Footer() {
+export function Footer() {
   return (
     <footer className="bg-foreground text-primary-foreground py-8">
       <div className="container mx-auto px-4">
         <div className="flex flex-col md:flex-row justify-between items-center">
           <div className="flex items-center mb-4 md:mb-0">
-            <LeafIcon className="text-primary h-5 w-5 mr-2" />
+            <Flame className="text-primary h-5 w-5 mr-2" />
+            {/* <CustomFlameIcon className="text-primary h-8 w-8 mr-2" /> */}
             <h2 className="font-merriweather font-bold text-xl">Joy Sparks</h2>
           </div>
           <div className="flex space-x-4 mb-4 md:mb-0">

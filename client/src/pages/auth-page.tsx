@@ -20,7 +20,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { LeafIcon, ArrowLeft, Linkedin, Apple } from "lucide-react";
+import { ArrowLeft, Linkedin, Apple, Flame } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 
 const loginSchema = z.object({
@@ -34,8 +34,8 @@ const registerSchema = z.object({
   last_name: z.string().min(1, { message: "Last name is required" }),
   username: z.string().email({ message: "Please enter a valid email address" }),
   password: z.string().min(8, { message: "Password must be at least 8 characters" }),
-  terms: z.literal(true, {
-    errorMap: () => ({ message: "You must accept terms and conditions" }),
+  terms: z.boolean().refine(val => val === true, {
+    message: "You must accept terms and conditions",
   }),
 });
 
@@ -98,7 +98,7 @@ export default function AuthPage() {
               <ArrowLeft className="h-4 w-4" />
             </Button>
             <div className="flex items-center">
-              <LeafIcon className="h-6 w-6 text-primary mr-2" />
+              <Flame className="h-6 w-6 text-primary mr-1" />
               <span className="font-bold text-xl">Joy Sparks</span>
             </div>
           </div>

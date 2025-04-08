@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import Header from "@/components/layout/header";
-import Footer from "@/components/layout/footer";
+import { Footer } from "@/components/layout/footer";
 import { JournalEntryForm } from "@/components/journal-entry-form";
 import { JournalEntryList } from "@/components/journal-entry-list";
 import { SearchBar, SearchFilters } from "@/components/search-bar";

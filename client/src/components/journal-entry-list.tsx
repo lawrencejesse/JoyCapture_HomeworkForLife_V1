@@ -15,6 +15,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { EditEntryModal } from "./edit-entry-modal";
+import { saveAs } from 'file-saver';
 
 // Character limit for the truncated view
 const TRUNCATE_LENGTH = 100;
@@ -97,8 +98,67 @@ export function JournalEntryList({ entries }: JournalEntryListProps) {
     return content.substring(0, TRUNCATE_LENGTH) + '...';
   };
 
+  // Function to handle CSV export
+  const handleExportCsv = () => {
+    if (!entries || entries.length === 0) {
+      toast({
+        title: "No entries to export",
+        description: "There are no memories to export.",
+        variant: "default",
+      });
+      return;
+    }
+
+    // Define CSV headers
+    const headers = ["Date", "Content", "Category"];
+    
+    // Function to escape CSV special characters
+    const escapeCsv = (value: string | null | undefined): string => {
+      if (value === null || value === undefined) return '';
+      let str = String(value);
+      // Escape double quotes by doubling them
+      str = str.replace(/"/g, '""');
+      // If the value contains a comma, newline, or double quote, enclose it in double quotes
+      if (str.includes(',') || str.includes('\n') || str.includes('"')) {
+        str = `"${str}"`;
+      }
+      return str;
+    };
+
+    // Prepare CSV rows
+    const csvRows = [
+      headers.join(','), // Header row
+      ...entries.map(entry => [
+        escapeCsv(formatEntryDate(entry.created_at, entry.custom_date)),
+        escapeCsv(entry.content),
+        escapeCsv(entry.category)
+      ].join(',')) // Data rows
+    ];
+
+    // Combine rows into a single CSV string
+    const csvString = csvRows.join('\n');
+
+    // Create a Blob from the CSV string
+    const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+
+    // Use file-saver to trigger the download
+    saveAs(blob, 'memories.csv');
+
+    toast({
+      title: "Export Successful",
+      description: "Your memories have been exported to memories.csv.",
+    });
+  };
+
   return (
     <div className="space-y-4">
+      {/* Export Button */}
+      <div className="flex justify-end mb-4">
+        <Button onClick={handleExportCsv}>
+          Export to CSV
+        </Button>
+      </div>
+
       {entries.map((entry) => {
         const isExpanded = expandedEntries[entry.id] || false;
         const needsTruncation = shouldTruncate(entry.content);

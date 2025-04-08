@@ -1,20 +1,23 @@
-import { useLocation } from "wouter";
+import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { YouTube } from "@/components/ui/youtube";
 import { Header } from "@/components/layout/header";
-import Footer from "@/components/layout/footer";
-import { CalendarIcon, Heart, LeafIcon, Play, TimerIcon, UserPlus } from "lucide-react";
+import { Footer } from "@/components/layout/footer";
+import {
+  CalendarIcon,
+  Heart,
+  Flame,
+  Play,
+  TimerIcon,
+  UserPlus,
+} from "lucide-react";
+import { CardHeader, CardTitle } from "@/components/ui/card";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 export default function LandingPage() {
   const [_, navigate] = useLocation();
   const { user } = useAuth();
-
-  // If user is already logged in, redirect to home
-  if (user) {
-    navigate("/home");
-    return null;
-  }
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -30,27 +33,36 @@ export default function LandingPage() {
             Inspired by the "Homework for Life" concept, Joy Sparks helps you preserve the small but meaningful moments that might otherwise slip away.
           </p>
           <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-4">
-            <Button size="lg" onClick={() => navigate("/auth")}>
-              <UserPlus className="mr-2 h-4 w-4" />
-              Get Started
-            </Button>
-            <Button variant="outline" size="lg" onClick={() => document.getElementById('concept-section')?.scrollIntoView({ behavior: 'smooth' })}>
-              <svg 
-                xmlns="http://www.w3.org/2000/svg" 
-                viewBox="0 0 24 24" 
-                fill="none" 
-                stroke="currentColor" 
-                strokeWidth="2" 
-                strokeLinecap="round" 
-                strokeLinejoin="round" 
-                className="mr-2 h-4 w-4"
-              >
-                <circle cx="12" cy="12" r="10" />
-                <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
-                <line x1="12" y1="17" x2="12.01" y2="17" />
-              </svg>
-              Learn More
-            </Button>
+            {user ? (
+              <Button size="lg" onClick={() => navigate("/home")}>
+                <Flame className="mr-2 h-4 w-4" />
+                Go to Journal
+              </Button>
+            ) : (
+              <>
+                <Button size="lg" onClick={() => navigate("/auth")}>
+                  <Flame className="mr-2 h-4 w-4" />
+                  Get Started
+                </Button>
+                <Button variant="outline" size="lg" onClick={() => document.getElementById('concept-section')?.scrollIntoView({ behavior: 'smooth' })}>
+                  <svg 
+                    xmlns="http://www.w3.org/2000/svg" 
+                    viewBox="0 0 24 24" 
+                    fill="none" 
+                    stroke="currentColor" 
+                    strokeWidth="2" 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round" 
+                    className="mr-2 h-4 w-4"
+                  >
+                    <circle cx="12" cy="12" r="10" />
+                    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+                    <line x1="12" y1="17" x2="12.01" y2="17" />
+                  </svg>
+                  Learn More
+                </Button>
+              </>
+            )}
           </div>
         </div>
         <div className="md:w-1/2">
@@ -89,9 +101,16 @@ export default function LandingPage() {
               These small moments often slip away, but they're the essence of our lives. By capturing them daily, you create a treasure trove of memories and cultivate mindfulness.
             </p>
             <div className="flex justify-center">
-              <Button size="lg" onClick={() => navigate("/auth")}>
-                Start Your Journey
-              </Button>
+              {user ? (
+                <Button size="lg" onClick={() => navigate("/home")}>
+                  <Flame className="mr-2 h-4 w-4" />
+                  Go to Your Journal
+                </Button>
+              ) : (
+                <Button size="lg" onClick={() => navigate("/auth")}>
+                  Start Your Journey
+                </Button>
+              )}
             </div>
           </div>
         </div>
@@ -204,10 +223,17 @@ export default function LandingPage() {
         <p className="text-lg mb-8 max-w-2xl mx-auto">
           It takes just a minute each day to preserve the moments that matter. Begin your collection of joy and watch how it transforms your perspective.
         </p>
-        <Button size="lg" onClick={() => navigate("/auth")}>
-          <UserPlus className="mr-2 h-4 w-4" />
-          Create Your Account
-        </Button>
+        {user ? (
+          <Button size="lg" onClick={() => navigate("/home")}>
+            <Flame className="mr-2 h-4 w-4" />
+            Go to Your Journal
+          </Button>
+        ) : (
+          <Button size="lg" onClick={() => navigate("/auth")}>
+            <Flame className="mr-2 h-4 w-4" />
+            Create Your Account
+          </Button>
+        )}
       </section>
       
       <Footer />
