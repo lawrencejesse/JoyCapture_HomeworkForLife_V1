@@ -1,8 +1,11 @@
 import { users, type User, type InsertUser, entries, type Entry, type InsertEntry } from "@shared/schema";
 import session from "express-session";
-import createMemoryStore from "memorystore";
+import connectPg from "connect-pg-simple";
+import { db } from "./db";
+import { eq, and, desc } from "drizzle-orm";
+import { pool } from "./db";
 
-const MemoryStore = createMemoryStore(session);
+const PostgresSessionStore = connectPg(session);
 
 export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
@@ -13,93 +16,79 @@ export interface IStorage {
   getEntry(id: number, userId: number): Promise<Entry | undefined>;
   updateEntry(id: number, userId: number, entry: Partial<InsertEntry>): Promise<Entry | undefined>;
   deleteEntry(id: number, userId: number): Promise<boolean>;
-  sessionStore: session.SessionStore;
+  sessionStore: session.Store;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<number, User>;
-  private entriesMap: Map<number, Entry>;
-  public sessionStore: session.SessionStore;
-  private userId: number;
-  private entryId: number;
+export class DatabaseStorage implements IStorage {
+  public sessionStore: session.Store;
 
   constructor() {
-    this.users = new Map();
-    this.entriesMap = new Map();
-    this.userId = 1;
-    this.entryId = 1;
-    this.sessionStore = new MemoryStore({
-      checkPeriod: 86400000, // prune expired entries every 24h
+    this.sessionStore = new PostgresSessionStore({
+      pool,
+      createTableIfMissing: true
     });
   }
 
   async getUser(id: number): Promise<User | undefined> {
-    return this.users.get(id);
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user || undefined;
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user || undefined;
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const id = this.userId++;
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
+    const [user] = await db
+      .insert(users)
+      .values(insertUser)
+      .returning();
     return user;
   }
 
   async createEntry(insertEntry: InsertEntry): Promise<Entry> {
-    const id = this.entryId++;
-    const entry: Entry = {
-      ...insertEntry,
-      id,
-      createdAt: new Date(),
-    };
-    this.entriesMap.set(id, entry);
+    const [entry] = await db
+      .insert(entries)
+      .values(insertEntry)
+      .returning();
     return entry;
   }
 
   async getEntries(userId: number, limit: number, offset: number): Promise<Entry[]> {
-    const userEntries = Array.from(this.entriesMap.values())
-      .filter(entry => entry.userId === userId)
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    
-    return userEntries.slice(offset, offset + limit);
+    return await db
+      .select()
+      .from(entries)
+      .where(eq(entries.userId, userId))
+      .orderBy(desc(entries.createdAt))
+      .limit(limit)
+      .offset(offset);
   }
 
   async getEntry(id: number, userId: number): Promise<Entry | undefined> {
-    const entry = this.entriesMap.get(id);
-    if (!entry || entry.userId !== userId) {
-      return undefined;
-    }
-    return entry;
+    const [entry] = await db
+      .select()
+      .from(entries)
+      .where(and(eq(entries.id, id), eq(entries.userId, userId)));
+    return entry || undefined;
   }
 
   async updateEntry(id: number, userId: number, entryUpdate: Partial<InsertEntry>): Promise<Entry | undefined> {
-    const entry = await this.getEntry(id, userId);
-    if (!entry) {
-      return undefined;
-    }
-    
-    const updatedEntry: Entry = {
-      ...entry,
-      ...entryUpdate,
-    };
-    
-    this.entriesMap.set(id, updatedEntry);
-    return updatedEntry;
+    const [entry] = await db
+      .update(entries)
+      .set(entryUpdate)
+      .where(and(eq(entries.id, id), eq(entries.userId, userId)))
+      .returning();
+    return entry || undefined;
   }
 
   async deleteEntry(id: number, userId: number): Promise<boolean> {
-    const entry = await this.getEntry(id, userId);
-    if (!entry) {
-      return false;
-    }
-    
-    return this.entriesMap.delete(id);
+    const result = await db
+      .delete(entries)
+      .where(and(eq(entries.id, id), eq(entries.userId, userId)))
+      .returning();
+    return result.length > 0;
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();

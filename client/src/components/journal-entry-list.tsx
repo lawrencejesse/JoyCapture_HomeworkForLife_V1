@@ -27,7 +27,7 @@ const categoryBadges: Record<string, { bg: string; text: string }> = {
 export function JournalEntryList({ entries }: JournalEntryListProps) {
   const formatEntryDate = (dateString: Date) => {
     const date = new Date(dateString);
-    return format(date, "MMM d");
+    return format(date, "MMM d, yyyy");
   };
 
   return (
@@ -36,9 +36,6 @@ export function JournalEntryList({ entries }: JournalEntryListProps) {
         <Card key={entry.id} className="card-shadow">
           <CardContent className="p-5">
             <div className="flex justify-between items-start mb-3">
-              <h3 className="font-bold text-lg text-foreground line-clamp-1">
-                {entry.title || "Untitled Entry"}
-              </h3>
               <div className="text-sm text-muted-foreground">
                 {formatEntryDate(entry.createdAt)}
               </div>
