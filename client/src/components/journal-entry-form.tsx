@@ -82,7 +82,7 @@ export function JournalEntryForm({
               control={form.control}
               name="content"
               render={({ field }) => (
-                <FormItem>
+                <FormItem className="max-h-[40vh] overflow-y-auto pr-2">
                   <FormLabel>Describe your moment</FormLabel>
                   <FormControl>
                     <Textarea

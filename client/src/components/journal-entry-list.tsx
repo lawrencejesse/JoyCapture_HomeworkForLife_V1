@@ -167,11 +167,11 @@ export function JournalEntryList({ entries }: JournalEntryListProps) {
           <React.Fragment key={entry.id}>
             <Card className="card-shadow">
               <CardContent className="p-5">
-                <div className="flex items-start mb-3">
-                  <div className="text-sm font-medium text-primary min-w-[120px]">
+                <div className="flex flex-col md:flex-row items-start mb-3">
+                  <div className="text-sm font-medium text-primary mb-2 md:mb-0 md:mr-3 md:min-w-[120px]">
                     {formatEntryDate(entry.created_at, entry.custom_date)}
                   </div>
-                  <div className="flex-1">
+                  <div className="flex-1 w-full">
                     <p className="text-foreground/90 whitespace-pre-line">
                       {getTruncatedContent(entry.content, isExpanded)}
                     </p>
@@ -198,30 +198,31 @@ export function JournalEntryList({ entries }: JournalEntryListProps) {
                     )}
                   </div>
 
-                  {/* Actions Dropdown */}
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="ml-2">
-                        <MoreHorizontalIcon className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem 
-                        onClick={() => handleEditClick(entry)}
-                        className="text-foreground/80 hover:text-primary cursor-pointer"
-                      >
-                        <Edit2 className="mr-2 h-4 w-4" />
-                        Edit
-                      </DropdownMenuItem>
-                      <DropdownMenuItem 
-                        onClick={() => deleteMutation.mutate(entry.id)} 
-                        className="text-destructive hover:text-destructive"
-                      >
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  <div className="self-end md:self-start md:ml-2">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon">
+                          <MoreHorizontalIcon className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem 
+                          onClick={() => handleEditClick(entry)}
+                          className="text-foreground/80 hover:text-primary cursor-pointer"
+                        >
+                          <Edit2 className="mr-2 h-4 w-4" />
+                          Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          onClick={() => deleteMutation.mutate(entry.id)} 
+                          className="text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
                 </div>
                 
                 <div className="flex justify-between items-center mt-4">
