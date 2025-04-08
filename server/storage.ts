@@ -56,13 +56,18 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getEntries(userId: number, limit: number, offset: number): Promise<Entry[]> {
-    return await db
+    console.log(`Getting entries for user ${userId} with limit ${limit} and offset ${offset}`);
+    
+    const results = await db
       .select()
       .from(entries)
       .where(eq(entries.userId, userId))
       .orderBy(desc(entries.createdAt))
       .limit(limit)
       .offset(offset);
+      
+    console.log(`Found ${results.length} entries for user ${userId}`);
+    return results;
   }
 
   async getEntry(id: number, userId: number): Promise<Entry | undefined> {

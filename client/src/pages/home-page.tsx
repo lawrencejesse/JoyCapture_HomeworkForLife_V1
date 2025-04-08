@@ -18,9 +18,7 @@ export default function HomePage() {
   const { 
     data: entries = [], 
     isLoading,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage 
+    isFetching
   } = useQuery<Entry[]>({
     queryKey: ["/api/entries", entryOffset],
     queryFn: async () => {
@@ -33,7 +31,7 @@ export default function HomePage() {
   });
 
   const createEntryMutation = useMutation({
-    mutationFn: async (newEntry: { title: string; content: string; category?: string }) => {
+    mutationFn: async (newEntry: { content: string; category?: string }) => {
       return apiRequest("POST", "/api/entries", newEntry);
     },
     onSuccess: () => {
@@ -63,7 +61,6 @@ export default function HomePage() {
           <JournalEntryForm 
             onSubmit={(data) => {
               createEntryMutation.mutate({
-                title: data.title,
                 content: data.content,
                 category: data.category,
               });
@@ -91,9 +88,9 @@ export default function HomePage() {
                   <button 
                     className="text-primary font-medium flex items-center justify-center mx-auto"
                     onClick={loadMoreEntries}
-                    disabled={isFetchingNextPage}
+                    disabled={isFetching}
                   >
-                    {isFetchingNextPage ? (
+                    {isFetching ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         Loading...

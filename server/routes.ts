@@ -43,9 +43,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const offset = Number(req.query.offset) || 0;
 
     try {
-      const entries = await storage.getEntries(req.user!.id, limit, offset);
+      // Get the current user's ID from the session
+      const userId = req.user!.id;
+      
+      // Only get entries belonging to this user
+      const entries = await storage.getEntries(userId, limit, offset);
+      
       res.json(entries);
     } catch (err) {
+      console.error("Error getting entries:", err);
       res.status(500).json({ message: "Failed to fetch entries" });
     }
   });
