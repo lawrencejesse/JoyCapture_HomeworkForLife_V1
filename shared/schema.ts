@@ -5,18 +5,22 @@ import { z } from "zod";
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),
-  password: text("password").notNull(),
+  password: text("password"),
+  google_uid: text("google_uid").unique(),
   first_name: text("first_name"),
   last_name: text("last_name"),
   created_at: timestamp("created_at").defaultNow().notNull(),
   updated_at: timestamp("updated_at").defaultNow().notNull(),
 });
 
-export const insertUserSchema = createInsertSchema(users).pick({
+export const insertUserSchema = createInsertSchema(users, {
+  password: z.string().nullable().optional(),
+}).pick({
   username: true,
   password: true,
   first_name: true,
   last_name: true,
+  google_uid: true,
 });
 
 export const entries = pgTable("entries", {
@@ -51,7 +55,7 @@ export const insertEntrySchema = z.object({
   media_urls: z.array(z.string()).optional(),
 });
 
-export type InsertUser = z.infer<typeof insertUserSchema>;
+export type InsertUser = z.infer<typeof insertUserSchema> & { password?: string | null };
 export type User = typeof users.$inferSelect;
 export type InsertEntry = z.infer<typeof insertEntrySchema>;
 export type Entry = typeof entries.$inferSelect;

@@ -2,7 +2,7 @@ import { users, type User, type InsertUser, entries, type Entry, type InsertEntr
 import session from "express-session";
 import connectPg from "connect-pg-simple";
 import { db } from "./db";
-import { eq, and, desc, sql, ilike, or, isNull } from "drizzle-orm";
+import { eq, and, desc, sql, ilike, or, isNull, SQL } from "drizzle-orm";
 import { pool } from "./db";
 
 const PostgresSessionStore = connectPg(session);
@@ -19,7 +19,9 @@ export interface SearchParams {
 export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
+  getUserByGoogleUid(googleUid: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  updateUserGoogleUid(userId: number, googleUid: string): Promise<void>;
   createEntry(entry: InsertEntry): Promise<Entry>;
   getEntries(user_id: number, limit: number, offset: number): Promise<Entry[]>;
   searchEntries(user_id: number, params: SearchParams, limit: number, offset: number): Promise<Entry[]>;
@@ -49,12 +51,28 @@ export class DatabaseStorage implements IStorage {
     return user || undefined;
   }
 
+  async getUserByGoogleUid(googleUid: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.google_uid, googleUid));
+    return user || undefined;
+  }
+
   async createUser(insertUser: InsertUser): Promise<User> {
+    const valuesToInsert = {
+      ...insertUser,
+      password: insertUser.password === undefined ? null : insertUser.password,
+      updated_at: new Date()
+    };
     const [user] = await db
       .insert(users)
-      .values(insertUser)
+      .values(valuesToInsert)
       .returning();
     return user;
+  }
+
+  async updateUserGoogleUid(userId: number, googleUid: string): Promise<void> {
+    await db.update(users)
+      .set({ google_uid: googleUid, updated_at: new Date() })
+      .where(eq(users.id, userId));
   }
 
   async createEntry(insertEntry: InsertEntry): Promise<Entry> {
@@ -99,14 +117,17 @@ export class DatabaseStorage implements IStorage {
   }
 
   async searchEntries(user_id: number, params: SearchParams, limit: number, offset: number): Promise<Entry[]> {
-    const conditions = [eq(entries.user_id, user_id), eq(entries.is_deleted, false)];
+    const conditions: SQL[] = [
+      eq(entries.user_id, user_id),
+      eq(entries.is_deleted, false)
+    ];
 
     if (params.query) {
       conditions.push(
         or(
           ilike(entries.content, `%${params.query}%`),
           ilike(entries.search_vector, `%${params.query}%`)
-        )
+        )!
       );
     }
 
@@ -119,7 +140,7 @@ export class DatabaseStorage implements IStorage {
     }
 
     if (params.tags?.length) {
-      conditions.push(sql`${entries.tags} && ${params.tags}`);
+      conditions.push(sql`${entries.tags} && ${params.tags as any}`);
     }
 
     if (params.category) {
@@ -133,7 +154,7 @@ export class DatabaseStorage implements IStorage {
     const results = await db
       .select()
       .from(entries)
-      .where(and(...conditions.filter((c): c is NonNullable<typeof c> => c !== undefined)))
+      .where(and(...conditions))
       .orderBy(desc(entries.created_at))
       .limit(limit)
       .offset(offset);

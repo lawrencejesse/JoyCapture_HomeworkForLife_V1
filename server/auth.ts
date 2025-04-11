@@ -5,7 +5,9 @@ import session from "express-session";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { storage } from "./storage";
-import { User as SelectUser } from "@shared/schema";
+import { User as SelectUser, insertUserSchema } from "@shared/schema";
+import admin from 'firebase-admin';
+import { z } from 'zod';
 
 declare global {
   namespace Express {
@@ -14,6 +16,24 @@ declare global {
 }
 
 const scryptAsync = promisify(scrypt);
+
+// Parse and validate service account credentials from environment variable
+const serviceAccountString = process.env.FIREBASE_SERVICE_ACCOUNT;
+if (!serviceAccountString) {
+  throw new Error("FIREBASE_SERVICE_ACCOUNT environment variable not set.");
+}
+let serviceAccount;
+try {
+  serviceAccount = JSON.parse(serviceAccountString);
+} catch (e) {
+  console.error("Failed to parse FIREBASE_SERVICE_ACCOUNT JSON:", e);
+  throw new Error("Invalid FIREBASE_SERVICE_ACCOUNT JSON format.");
+}
+
+// Initialize Firebase Admin SDK
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount),
+});
 
 async function hashPassword(password: string) {
   const salt = randomBytes(16).toString("hex");
@@ -50,7 +70,7 @@ export function setupAuth(app: Express) {
   passport.use(
     new LocalStrategy(async (username, password, done) => {
       const user = await storage.getUserByUsername(username);
-      if (!user || !(await comparePasswords(password, user.password))) {
+      if (!user || !user.password || !(await comparePasswords(password, user.password))) {
         return done(null, false);
       } else {
         return done(null, user);
@@ -70,6 +90,16 @@ export function setupAuth(app: Express) {
       return res.status(400).send("Username already exists");
     }
 
+    // Validate input against schema - ensure password is provided for local registration
+    try {
+      insertUserSchema.parse(req.body);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Validation failed", errors: error.errors });
+      }
+      return res.status(500).send("Internal Server Error");
+    }
+
     const user = await storage.createUser({
       ...req.body,
       password: await hashPassword(req.body.password),
@@ -83,6 +113,73 @@ export function setupAuth(app: Express) {
 
   app.post("/api/login", passport.authenticate("local"), (req, res) => {
     res.status(200).json(req.user);
+  });
+
+  app.post("/api/auth/google/callback", async (req, res, next) => {
+    const { idToken } = req.body;
+
+    if (!idToken) {
+      return res.status(400).send("ID token required");
+    }
+
+    try {
+      const decodedToken = await admin.auth().verifyIdToken(idToken);
+      const googleUid = decodedToken.uid;
+      const email = decodedToken.email;
+      const name = decodedToken.name; // Contains full name
+
+      if (!email) {
+        return res.status(400).send("Email not available from Google profile");
+      }
+
+      let user = await storage.getUserByGoogleUid(googleUid);
+
+      if (!user) {
+        // User not found by google_uid, try finding by email
+        user = await storage.getUserByUsername(email); // Assuming username is email for now
+
+        if (user) {
+          // User found by email, link google_uid
+          await storage.updateUserGoogleUid(user.id, googleUid);
+          user.google_uid = googleUid; // Update user object in memory
+        } else {
+          // No user found by google_uid or email, create new user
+          const username = email; // Use email as username
+          const [firstName, ...lastNameParts] = (name || '').split(' ');
+          const lastName = lastNameParts.join(' ');
+
+          // Use storage function to create user without password
+          user = await storage.createUser({
+            username: username,
+            password: null, // Set password to null for Google sign-in
+            google_uid: googleUid,
+            first_name: firstName,
+            last_name: lastName,
+          });
+        }
+      }
+
+      // Log the user in using Passport's login function
+      req.login(user, (err) => {
+        if (err) {
+          console.error("Passport login error after Google auth:", err);
+          return next(err); // Pass error to Express error handler
+        }
+        // Send back the user object, client can decide where to redirect
+        res.status(200).json(user);
+      });
+
+    } catch (error) {
+      console.error("--- Google Auth Callback Error ---");
+      // Log the full error object, including stack trace if available
+      console.error("Error Object:", error);
+      if (error instanceof Error) {
+        console.error("Error Message:", error.message);
+        console.error("Error Stack:", error.stack);
+      }
+      console.error("--- End Google Auth Callback Error ---");
+      res.status(401).send("Authentication failed. Check server logs for details."); // More informative message
+    }
   });
 
   app.post("/api/logout", (req, res, next) => {

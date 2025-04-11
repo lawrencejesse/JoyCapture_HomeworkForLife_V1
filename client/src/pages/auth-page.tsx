@@ -20,8 +20,10 @@ import {
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Linkedin, Apple, Flame } from "lucide-react";
+import { ArrowLeft, Linkedin, Apple, Flame, Chrome } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
+import { signInWithGoogle } from "@/lib/firebase";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 const loginSchema = z.object({
   username: z.string().email({ message: "Please enter a valid email address" }),
@@ -45,13 +47,29 @@ type RegisterFormValues = z.infer<typeof registerSchema>;
 export default function AuthPage() {
   const [_, navigate] = useLocation();
   const { user, loginMutation, registerMutation } = useAuth();
+  const queryClient = useQueryClient();
   
-  // Redirect to home if already logged in
-  useEffect(() => {
-    if (user) {
-      navigate("/home");
-    }
-  }, [user, navigate]);
+  const googleLoginMutation = useMutation({
+    mutationFn: async (idToken: string) => {
+      const res = await fetch("/api/auth/google/callback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ idToken }),
+      });
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(`Google login failed: ${res.status} ${errorText}`);
+      }
+      return res.json();
+    },
+    onSuccess: (userData) => {
+      console.log("Backend Google Login Success:", userData);
+      queryClient.setQueryData(["/api/user"], userData);
+    },
+    onError: (error) => {
+      console.error("Backend Google Login Error:", error);
+    },
+  });
 
   const loginForm = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -88,6 +106,22 @@ export default function AuthPage() {
       last_name: data.last_name,
     });
   }
+
+  const handleGoogleSignIn = async () => {
+    try {
+      const { idToken } = await signInWithGoogle();
+      googleLoginMutation.mutate(idToken);
+    } catch (error) {
+      console.error("Google Sign-in Popup Error:", error);
+    }
+  };
+
+  // Redirect to home if already logged in
+  useEffect(() => {
+    if (user) {
+      navigate("/home");
+    }
+  }, [user, navigate]);
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -184,12 +218,16 @@ export default function AuthPage() {
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-4">
-                        <Button variant="outline" className="w-full">
+                      <div className="grid grid-cols-3 gap-4">
+                        <Button variant="outline" className="w-full" type="button" onClick={handleGoogleSignIn}>
+                          <Chrome className="mr-2 h-4 w-4" />
+                          Google
+                        </Button>
+                        <Button variant="outline" className="w-full" type="button">
                           <Linkedin className="mr-2 h-4 w-4" />
                           LinkedIn
                         </Button>
-                        <Button variant="outline" className="w-full">
+                        <Button variant="outline" className="w-full" type="button">
                           <Apple className="mr-2 h-4 w-4" />
                           Apple
                         </Button>

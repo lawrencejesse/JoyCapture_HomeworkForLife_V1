@@ -164,7 +164,7 @@ export function JournalEntryList({ entries }: JournalEntryListProps) {
         const needsTruncation = shouldTruncate(entry.content);
         
         return (
-          <React.Fragment key={entry.id}>
+          <div key={entry.id}>
             <Card className="card-shadow">
               <CardContent className="p-5">
                 <div className="flex flex-col md:flex-row items-start mb-3">
@@ -241,7 +241,7 @@ export function JournalEntryList({ entries }: JournalEntryListProps) {
                 </div>
               </CardContent>
             </Card>
-          </React.Fragment>
+          </div>
         );
       })}
 
