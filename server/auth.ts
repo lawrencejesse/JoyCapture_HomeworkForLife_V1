@@ -42,10 +42,38 @@ async function hashPassword(password: string) {
 }
 
 async function comparePasswords(supplied: string, stored: string) {
-  const [hashed, salt] = stored.split(".");
-  const hashedBuf = Buffer.from(hashed, "hex");
-  const suppliedBuf = (await scryptAsync(supplied, salt, 64)) as Buffer;
-  return timingSafeEqual(hashedBuf, suppliedBuf);
+  try {
+    // console.log("comparePasswords - Supplied (raw - careful logging):", supplied); 
+    // console.log("comparePasswords - Stored hash.salt:", stored);
+    if (!stored || !stored.includes('.')) {
+        console.error("comparePasswords - Stored password format is invalid:", stored);
+        return false;
+    }
+    const [hashed, salt] = stored.split(".");
+    // console.log("comparePasswords - Extracted hash:", hashed);
+    // console.log("comparePasswords - Extracted salt:", salt);
+    
+    const hashedBuf = Buffer.from(hashed, "hex");
+    const suppliedBuf = (await scryptAsync(supplied, salt, 64)) as Buffer;
+    // console.log("comparePasswords - Hashed supplied for comparison:", suppliedBuf.toString('hex'));
+    
+    // Ensure buffers are the same length for timingSafeEqual
+    if (hashedBuf.length !== suppliedBuf.length) {
+        console.error("comparePasswords - Hash length mismatch.");
+        // To prevent timing attacks, still perform a dummy comparison
+        // Create a dummy buffer of the correct length
+        const dummySuppliedBuf = Buffer.alloc(hashedBuf.length); 
+        timingSafeEqual(hashedBuf, dummySuppliedBuf); 
+        return false; 
+    }
+
+    const result = timingSafeEqual(hashedBuf, suppliedBuf);
+    // console.log("comparePasswords - Comparison result:", result);
+    return result;
+  } catch (error) {
+      console.error("Error during password comparison:", error);
+      return false;
+  }
 }
 
 export function setupAuth(app: Express) {
@@ -69,10 +97,19 @@ export function setupAuth(app: Express) {
 
   passport.use(
     new LocalStrategy(async (username, password, done) => {
+      // console.log("LocalStrategy - Username:", username);
+      // Be careful logging raw passwords, even temporarily in development
+      // console.log("LocalStrategy - Password supplied:", password); 
       const user = await storage.getUserByUsername(username);
+      // console.log("LocalStrategy - User found:", !!user);
+      // if (user) {
+          // console.log("LocalStrategy - Stored password value:", user.password);
+      // }
       if (!user || !user.password || !(await comparePasswords(password, user.password))) {
+        // console.log("LocalStrategy - Password comparison failed or user not found.");
         return done(null, false);
       } else {
+        // console.log("LocalStrategy - Password comparison succeeded.");
         return done(null, user);
       }
     }),
